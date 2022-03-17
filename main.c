@@ -3,6 +3,7 @@
 #include "hardware/spi.h"
 #include "hardware/gpio.h"
 #include "pico7219.h"
+#include "picoMPU6050.h"
 
 #define MOSI 3
 #define SCK 2
@@ -15,6 +16,18 @@
 
 uint32_t getTickCount(void);
 
+struct _2d {
+    float x;
+    float y;
+};
+
+
+struct dot {
+ struct _2d pos;
+ struct _2d vel;
+ struct _2d acc;
+};
+
 void update_grid(struct Pico7219 *device, int8_t r, int8_t c, int8_t val) {
     pico7219_set_on_row(device, r, (0x0100 >> (c + 1)) & val, false);
 }
@@ -24,10 +37,22 @@ void render_grid(struct Pico7219 *device, float interpolation){
 
 int main() {
     
+
     struct Pico7219 *device = pico7219_create(SPI, BAUD, MOSI, SCK, CS);
+    printf("init mpu\n");
+    int_mpu6050();
+
     stdio_init_all();
     pico7219_switch_off_all (device, true);
     
+    struct dot dot;
+    dot.pos.x=0;
+    dot.pos.y=0;
+    dot.vel.x=0;
+    dot.vel.y=0;
+    dot.acc.x=0;
+    dot.acc.y=0;
+
     float r = 0;
     float c = 0;
 
@@ -45,10 +70,11 @@ int main() {
         loops = 0;
         while ( getTickCount() > next_game_tick && loops < MAX_FRAMESKIP ) {
             printf("Working\n");
-            r += 1*0.5;
-            c += 1*0.5;
-            if(r > 8) r = 0;
-            if(c > 8) c = 0;
+            start_mpu6050();
+            dot.pos.x += 1*0.5;
+            dot.pos.y += 1*0.5;
+            if(dot.pos.x > 8) dot.pos.x = 0;
+            if(dot.pos.y > 8) dot.pos.y = 0;
             // update_grid(device,r,c, 0xFF);
             next_game_tick += SKIP_TICKS;
             loops++;
@@ -60,10 +86,10 @@ int main() {
         interpolation = (float)( getTickCount() + SKIP_TICKS - next_game_tick ) / (float)( SKIP_TICKS );
         pico7219_switch_off_all(device, true);
         
-        r= r + 0.0005*interpolation;
-        c= c + 0.0005*interpolation;
+        dot.pos.x = dot.pos.x + 0.0005*interpolation;
+        dot.pos.y = dot.pos.y + 0.0005*interpolation;
         
-        update_grid(device,r,c, 0xFF);
+        update_grid(device,dot.pos.x,dot.pos.y, 0xFF);
         render_grid(device, interpolation);
     }
 }

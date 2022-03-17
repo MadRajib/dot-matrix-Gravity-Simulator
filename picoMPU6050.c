@@ -8,6 +8,9 @@
 #define PICO_I2C_SDA_PIN 10
 #define PICO_I2C_SCL_PIN 11
 
+static const float SENSITIVITY_2G = 1.0 / 256;  // (g/LSB)
+static const float EARTH_GRAVITY = 9.80665;     // Earth's gravity in [m/s^2]
+
 static int addr = 0x68;
 
 static void mpu6050_reset() {
@@ -66,14 +69,7 @@ void int_mpu6050 () {
 
 }
 
-void start_mpu6050() {
-    int16_t acceleration[3], gyro[3], temp;
+void start_mpu6050(int16_t *acceleration) {
+        int16_t acc[3] ,gyro[3], temp;
         mpu6050_read_raw(acceleration, gyro, &temp);
-        printf("Acc. X = %d, Y = %d, Z = %d\n", acceleration[0], acceleration[1], acceleration[2]);
-        printf("Gyro. X = %d, Y = %d, Z = %d\n", gyro[0], gyro[1], gyro[2]);
-        // Temperature is simple so use the datasheet calculation to get deg C.
-        // Note this is chip temperature.
-        printf("Temp. = %f\n", (temp / 340.0) + 36.53);
-
-        //sleep_ms(100);
 }

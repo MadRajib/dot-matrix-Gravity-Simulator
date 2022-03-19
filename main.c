@@ -100,51 +100,17 @@ int main() {
             get_gravity_dir(acc_ptr, dir);
             
 
-            dot.acc.x = map(acc_ptr[0],-20000,20000,-0.9,0.9);
-            dot.acc.y = map(acc_ptr[1],-20000,20000,-0.9,0.9);
+            dot.acc.x = map(acc_ptr[0],-20000,20000,0.9,-0.9);
+            dot.acc.y = map(acc_ptr[1],-20000,20000,0.9,-0.9);
 
             dot.vel.x += dot.acc.x*0.001;
             dot.vel.y += dot.acc.y*0.001;
 
 
             printf("Acc. X = %d, Y = %d, Z = %d, max:%d,,accx:%f,accy:%f\n", acc_ptr[0], acc_ptr[1], acc_ptr[2], (dir->axis+1)*(dir->or), dot.acc.x,dot.acc.y);
-            // if(dir->axis == 0 && dir->or > 0)
-            //     dot.vel.x += 0.9*acc*0.001;
-            // else if(dir->axis == 0)
-            //     dot.vel.x -= 0.9*0.001;
-            // else if(dir->axis == 1 && dir->or > 0)
-            //     dot.vel.y += 0.9*0.001;
-            // else if(dir->axis == 1)
-            //     dot.vel.y -= 0.9*0.001; 
-            dot.vel.x *= 0.9;
-            dot.vel.y *= 0.9;
-            
-            // switch(dir->axis) {
-            //     case 0:
-            //         if(dir->or > 0) {
-            //             dot.pos.x*=1;
-            //             dot.pos.y*=1;
-            //         } else {
-            //             dot.pos.x*=-1;
-            //             dot.pos.y;
-            //         }
-                           
-            //     break;
-            //     case 1:
-                
-            //     {
-            //         float temp = dot.pos.x;
-            //         dot.pos.x = dot.pos.y;
-            //         dot.pos.y = temp;
-            //     }
-            //     if(dir->or > 0) {
-            //             dot.pos.x*=1;
-            //             dot.pos.y*=1;
-            //         } else {
-            //             dot.pos.x*=-1;
-            //             dot.pos.y;
-            //         }
-            // }
+
+            //dot.vel.x *= 0.9;
+            //dot.vel.y *= 0.9;
 
             // update_grid(device,r,c, 0xFF);
             next_game_tick += SKIP_TICKS;
@@ -164,7 +130,7 @@ int main() {
         if(dot.pos.x < 0 ) { dot.pos.x = 0; dot.vel.x = 0;}
         if(dot.pos.y < 0 ) { dot.pos.y = 0; dot.vel.y = 0;}
         
-        update_grid(device,dot.pos.x,dot.pos.y, 0xFF);
+        update_grid(device,dot.pos.y,dot.pos.x, 0xFF);
         render_grid(device, interpolation);
     }
 

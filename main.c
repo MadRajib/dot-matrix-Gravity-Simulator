@@ -13,7 +13,7 @@
 #define FRAMES_PER_SECOND 25
 #define SKIP_TICKS (1000/FRAMES_PER_SECOND)
 #define MAX_FRAMESKIP 5
-
+#define NUM_DOTS 1
 uint32_t getTickCount(void);
 
 struct _2d {
@@ -45,6 +45,10 @@ void render_grid(struct Pico7219 *device, float interpolation){
     pico7219_flush(device);
 }
 
+bool can_move_to(struct Pico7219 *device, int8_t r, int8_t c){
+    return device->vrow_data[r] & (0x0100 >> (c + 1));
+}
+
 void get_gravity_dir(int16_t *acc_ptr, struct dir *dir){
     
     int16_t x = abs(acc_ptr[0]),y = abs(acc_ptr[1]),z = abs(acc_ptr[2]);
@@ -72,13 +76,13 @@ int main() {
     stdio_init_all();
     pico7219_switch_off_all (device, true);
     
-    struct dot dot;
-    dot.pos.x=0;
-    dot.pos.y=0;
-    dot.vel.x=0;
-    dot.vel.y=0;
-    dot.acc.x=0;
-    dot.acc.y=0;
+    // struct dot dot;
+    // dot.pos.x=0;
+    // dot.pos.y=0;
+    // dot.vel.x=0;
+    // dot.vel.y=0;
+    // dot.acc.x=0;
+    // dot.acc.y=0;
 
     float acc = 0;
 
@@ -87,6 +91,18 @@ int main() {
     struct dir *dir = malloc(sizeof(struct dir));
     dir->axis = 2;
     dir->or = 1;
+
+    struct dot dots[NUM_DOTS];
+    for (int i = 0; i < NUM_DOTS; i++) {
+        dots[i].pos.x=i+1;
+        dots[i].pos.y=i+1;
+        dots[i].vel.x=0;
+        dots[i].vel.y=0;
+        dots[i].acc.x=0;
+        dots[i].acc.y=0; 
+    }
+    int8_t temp_x;
+    int8_t temp_y;
 
     uint32_t next_game_tick =  getTickCount();
     int loops;
@@ -99,15 +115,17 @@ int main() {
             start_mpu6050(acc_ptr);
             get_gravity_dir(acc_ptr, dir);
             
+            for (int i = 0; i < NUM_DOTS; i++) {
+                dots[i].acc.x = map(acc_ptr[0],-20000,20000,0.9,-0.9);
+                dots[i].acc.y = map(acc_ptr[1],-20000,20000,0.9,-0.9);
 
-            dot.acc.x = map(acc_ptr[0],-20000,20000,0.9,-0.9);
-            dot.acc.y = map(acc_ptr[1],-20000,20000,0.9,-0.9);
+                dots[i].vel.x += dots[i].acc.x*0.001;
+                dots[i].vel.y += dots[i].acc.y*0.001;
+                printf("Acc. X = %d, Y = %d, Z = %d, max:%d,,accx:%f,accy:%f\n", acc_ptr[0], acc_ptr[1], acc_ptr[2], (dir->axis+1)*(dir->or), dots[i].acc.x,dots[i].acc.y);
+            }
 
-            dot.vel.x += dot.acc.x*0.001;
-            dot.vel.y += dot.acc.y*0.001;
 
-
-            printf("Acc. X = %d, Y = %d, Z = %d, max:%d,,accx:%f,accy:%f\n", acc_ptr[0], acc_ptr[1], acc_ptr[2], (dir->axis+1)*(dir->or), dot.acc.x,dot.acc.y);
+            
 
             //dot.vel.x *= 0.9;
             //dot.vel.y *= 0.9;
@@ -123,14 +141,23 @@ int main() {
         interpolation = (float)( getTickCount() + SKIP_TICKS - next_game_tick ) / (float)( SKIP_TICKS );
         pico7219_switch_off_all(device, true);
         
-        dot.pos.x = dot.pos.x + dot.vel.x*interpolation;
-        dot.pos.y = dot.pos.y + dot.vel.y*interpolation;
-        if(dot.pos.x > 7 ) { dot.pos.x = 7; dot.vel.x = 0;}
-        if(dot.pos.y > 7 ) { dot.pos.y = 7; dot.vel.y = 0;}
-        if(dot.pos.x < 0 ) { dot.pos.x = 0; dot.vel.x = 0;}
-        if(dot.pos.y < 0 ) { dot.pos.y = 0; dot.vel.y = 0;}
-        
-        update_grid(device,dot.pos.y,dot.pos.x, 0xFF);
+        for (int i = 0; i < NUM_DOTS; i++) {
+            temp_x = dots[i].pos.x + dots[i].vel.x*interpolation;
+            temp_y = dots[i].pos.y + dots[i].vel.y*interpolation;
+
+            if(temp_x > 7 ) { temp_x = 7; dots[i].vel.x = 0;}
+            if(temp_y > 7 ) { temp_y = 7; dots[i].vel.y = 0;}
+            if(temp_x < 0 ) { temp_x = 0; dots[i].vel.x = 0;}
+            if(temp_y < 0 ) { temp_y = 0; dots[i].vel.y = 0;}
+            
+            // if (can_move_to(device, temp_x, temp_y)) {
+                
+            // }
+            dots[i].pos.x = temp_x;
+            dots[i].pos.y = temp_y;
+            
+            update_grid(device,dots[i].pos.y,dots[i].pos.x, 0xFF);
+        }
         render_grid(device, interpolation);
     }
 
